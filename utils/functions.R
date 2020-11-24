@@ -3,13 +3,17 @@
 #---- Add gettings tstas for normal and exponential distribution
 #---- 
 
-
 library (pracma)
 library(fitdistrplus)
 library(spatialEco)
 library(dplyr)
 library(tidyr)
+library(fitdistrplus)
+library(gridExtra)
 Build_Record_Amplitude <- function(time_series,dist_ts = "gamma", dist_mm= "gamma",valleys = F) {
+  
+  #handle -ve and 0 values
+  if(min(time_series)<0) time_series = time_series - min(time_series)
   
   #This function takes time series and X vector of data range to build the PDF
   #and outputs full stochastic record with Gamma estimates, confidence inter and Gamma moments the record in in relation to the peak amplitude
@@ -22,7 +26,7 @@ Build_Record_Amplitude <- function(time_series,dist_ts = "gamma", dist_mm= "gamm
   }
   
   #Peaks---------------------
-  peaks = data.frame(findpeaks(x = record$time_series ,zero = '0',nups = 0, ndowns =0))
+  peaks = data.frame(findpeaks(x = record$time_series ,zero = '0',nups = 0, ndowns =1))
   record$peaks = peaks$X1
   record$peak_locs = peaks$X2
   
@@ -129,8 +133,7 @@ get_micro_mov <- function(min_index, max_index, max_value, time_series){
 }
 
 plot_peaks <- function(ts,cex=1){
-  require(pracma)
-  
+
   peaks = data.frame(findpeaks(x = ts,zero = '0',nups = 1,ndowns = 0))
   valleys = data.frame(findpeaks(x = -ts,zero = '0',nups = 0,ndowns = 1))
   
@@ -180,8 +183,7 @@ get_dist_stats <- function(fit.dist){
   return(stats)
 }
 dist_best <-  function(ts, distr = c("gamma", "lnorm", "exp", "norm"), plot =F, sep_dist = F) {
-  require(fitdistrplus)
-  require(gridExtra)
+
   fits = list()
   ll = c()
     for (i in distr) {
@@ -231,4 +233,87 @@ dist_best <-  function(ts, distr = c("gamma", "lnorm", "exp", "norm"), plot =F, 
 
       }
     return(list(ll,plt))
+}
+
+
+
+get_parameters = function(list_of_data,mappings){
+  
+  mapped_data = re_process_data(list_of_data,mappings)
+  list_of_speeds = get_speed(mapped_data)
+  #lisp = list_of_speeds_processed
+  lisp = speed_combine(list_of_speeds=list_of_speeds, type = "concatenate")
+  
+  mat = matrix(data = NA,nrow = length(lisp),ncol = 7)
+  
+  for( i in 1: length(lisp)){
+    mat[i,1] = names(lisp[i])
+    record = Build_Record_Amplitude(lisp[[i]])
+    mat[i,c(2:7)] = c(record$phat,
+                      sk=record$sk,
+                      mu=record$mean,
+                      kt=record$kt,
+                      sd = sqrt(record$var)
+    )
+  }
+  df = data.frame(mat)
+  colnames(df)<-c("Location","shape","scale","skew","mu","kt","sd") # be sure to match it with above matrix
+  num_cols = c( "shape","scale","skew","mu","kt","sd")
+  df <- df %>% mutate(across(num_cols, as.numeric)) 
+  # df <- df %>% mutate(across(num_cols, round, 2)) 
+  
+  return(df)
+  
+}
+
+plot_params = function(data, emotion_fil=c(), subject_fil= c(), location_fil =c(),scene=NA){
+  
+  d = data %>% 
+    mutate(
+      subject_emotion = paste(subject,"-", emotion)
+    )
+  
+  if(!length(subject_fil)==0){
+    d = d %>% filter(subject %in% subject_fil)
+  }
+  if(!length(location_fil)==0){
+    d = d %>% filter(Location %in% location_fil)
+  }
+  if(!length(emotion_fil)==0){
+    d = d %>% filter(emotion %in% emotion_fil)
+  }
+  
+  fig = plot_ly(data = d,
+                x = ~shape,
+                y = ~mu,
+                z = ~kt ,
+                color = ~ emotion ,
+                type="scatter3d", 
+                mode = "markers",
+                symbol = ~ subject,  
+                symbols = c('circle','x','o',"diamond","sqaure","cross","star","hash"),
+                marker = list(size = 5),
+                scene = scene,
+                hoverinfo = ~Location 
+  )
+  
+  fig = fig %>%  add_paths( split= ~ subject_emotion, showlegend=F)
+  
+  fig = fig %>% layout(title = ' Locating in Paramter Space',
+                       scene = list(xaxis = list(gridcolor = 'rgb(0, 0, 0)',
+                                                 zerolinewidth = 5,
+                                                 ticklen = 5,
+                                                 gridwidth = 1),
+                                    yaxis = list(gridcolor = 'rgb(0, 0, 0)',
+                                                 zerolinewidth = 5,
+                                                 ticklen = 5,
+                                                 gridwidth = 1),
+                                    zaxis = list(gridcolor = 'rgb(0, 0, 0)',
+                                                 zerolinewidth = 5,
+                                                 ticklen = 5,
+                                                 gridwidth = 1)
+                       ),
+                       paper_bgcolor = 'rgb(243, 243, 243)',
+                       plot_bgcolor = 'rgb(243, 243, 230)')
+  return(fig)
 }
