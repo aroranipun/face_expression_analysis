@@ -2,7 +2,7 @@
 # 1.get_dist_stats
 #---- Add gettings tstas for normal and exponential distribution
 #---- 
-
+library(raster)
 library (pracma)
 library(fitdistrplus)
 library(spatialEco)
@@ -236,7 +236,6 @@ dist_best <-  function(ts, distr = c("gamma", "lnorm", "exp", "norm"), plot =F, 
 }
 
 
-
 get_parameters = function(list_of_data,mappings){
   
   mapped_data = re_process_data(list_of_data,mappings)
@@ -259,7 +258,9 @@ get_parameters = function(list_of_data,mappings){
   df = data.frame(mat)
   colnames(df)<-c("Location","shape","scale","skew","mu","kt","sd") # be sure to match it with above matrix
   num_cols = c( "shape","scale","skew","mu","kt","sd")
-  df <- df %>% mutate(across(num_cols, as.numeric)) 
+  df <- df %>% 
+    mutate(across(num_cols, as.numeric))
+  
   # df <- df %>% mutate(across(num_cols, round, 2)) 
   
   return(df)

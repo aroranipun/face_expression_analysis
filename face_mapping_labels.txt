@@ -1,0 +1,31 @@
+# frontalis and procerus muscle (5x2= 10)
+brow_l = c(17:21),
+brow_r = c(22:26),
+
+#Masseter muscles (4x2) = 8
+chk_l = c(0:3),
+chk_r = c(13:16),
+
+#  Platysma and Risorious (3x2+1) = 7
+chin_l = c(4:7),
+chin_r = c(9:12),
+chin_mid = c(8),
+
+#orbicularis (25)
+nose_lip = c(31:35), #5
+
+lower_lip_l= c(66,67,57:59), #5
+lower_lip_r= c(65,56:55), # 3
+
+upper_lip_l = c(60:62, 48:51), # 7
+uper_lip_r = c(52:54,63:64), # 6
+
+#nasalisa
+nose = c(27:30), #4
+
+#orbicularis # 6x2+2 =14
+eye_l = c(36:41),
+eye_r = c(42:47),
+pupil_l = c(68),
+pupil_r= c(69),
+face_sections = c("brows","cheeks","chin","lips","eyes","pupils","nose"))

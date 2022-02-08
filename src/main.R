@@ -3,43 +3,41 @@ source("utils/functions.R")
 source("utils/utils.R")
 source("utils/mapping.R")
 library("tcltk", "dplyr")
-
+source("utils/micro_movements.utils.R")
 load(file = "data/face_emotions.RDATA")
-get_parameters = function(list_of_data,mappings){
-  
-  mapped_data = re_process_data(list_of_data,mappings)
-  list_of_speeds = get_speed(mapped_data)
-  #lisp = list_of_speeds_processed
-  lisp = speed_combine(list_of_speeds=list_of_speeds, type = "concatenate")
-  
-  mat = matrix(data = NA,nrow = length(lisp),ncol = 7)
-  
-  for( i in 1: length(lisp)){
-    mat[i,1] = names(lisp[i])
-    record = Build_Record_Amplitude(lisp[[i]])
-    mat[i,c(2:7)] = c(record$phat,
-                      sk=record$sk,
-                      mu=record$mean,
-                      kt=record$kt,
-                      sd = sqrt(record$var)
-                      )
-  }
-  df = data.frame(mat)
-  colnames(df)<-c("Location","shape","scale","skew","mu","kt","sd") # be sure to match it with above matrix
-  num_cols = c( "shape","scale","skew","mu","kt","sd")
-  df <- df %>% mutate(across(num_cols, as.numeric)) 
- # df <- df %>% mutate(across(num_cols, round, 2)) 
-  
-  return(df)
-  
-}
+#df_params$emotion[which(df_params$emotion=="sad")]<-"sadness"
 
 # Get Parameters-----------------------------
 subject_count = length(names(data_list))
                     
 pb <- txtProgressBar(min = 0, max = subject_count, style = 3)
 
-for (i in 1:subject_count) 
+for (i in 1: subject_count){
+  subject = names(data_list)[i]
+  
+  for ( j in 1:length(data_list[[i]])){
+    emotion = names(data_list[[i]])[j]
+    df =get_parameters(list_of_data = data_list[[i]][[j]],mappings = mappings)
+    df$emotion= emotion
+    df$subject = subject
+    if(j==1 & i==1){
+      df_params = df
+    }else{
+      df_params = rbind(df_params,df)
+    }
+  }
+  setTxtProgressBar(pb, i)
+}
+
+summary = df_params %>%
+  group_by(emotion) %>%
+  summarise(across(
+    .cols = is.numeric, 
+    .fns = list(Mean = mean), na.rm = TRUE, 
+    .names = "{col}_{fn}"
+  ))
+
+
 # Plotting parameters----------------------------
 
 library(plotly)
@@ -135,7 +133,7 @@ f1= plot_params(data = df_params,
 f2= plot_params(data = df_params,
                 emotion_fil =c() ,
                 location_fil = c(),
-                subject_fil = c("nipun"),scene = "scene2")
+                subject_fil = c("richa"),scene = "scene2")
 f3= plot_params(data = df_params,
                 emotion_fil =c() ,
                 location_fil = c(),
